@@ -1,0 +1,16 @@
+{
+  "name": "sudoku-ia",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:stevanmesser/SudokuIA.git",
+  "license": "MIT",
+  "scripts": {
+    "start": "nodemon index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.12"
+  },
+  "dependencies": {
+    "asciichart": "^1.5.25"
+  }
+}
