@@ -35,10 +35,111 @@ function mutate(i, createGenome, mutationRate, sigma) {
   }
 }
 
-function fitFunction(data) {
-  return data.reduce((sum, i) => sum + i, 0)
+function transformToBoard(data) {
+  // const size = Math.sqrt(data.length)
+  
+  const transformedData = [[]]
+  let transformedIndex = 0
+  let indexChange = 0
+  for (let index = 0; index < data.length; index++) {
+    indexChange++
+    if (indexChange > 4) {
+      transformedData.push([])
+      transformedIndex++
+      indexChange = 1
+    } 
+    transformedData[transformedIndex].push(data[index])
+  }
+
+  return transformedData
 }
 
+function fitFunction(data) {
+  const nroQuad = Math.sqrt(data.length)
+  const raiz = Math.sqrt(nroQuad)
+
+  let points = 0
+
+  let countIndex = 0
+  let founds = []
+  let founded = false
+
+  // linha horizontal
+  for (let I = 0; I < data.length; I++) {
+    if (!founded) {
+      const value = data[I]
+      if (founds.find(nro => nro === value)) {
+        founded = true
+      } else {
+        founds.push(value)
+      }
+    }
+
+    countIndex++
+
+    if (countIndex === nroQuad) {
+      if (!founded) {
+        points += 2
+      }
+      founds = []
+      founded = false
+      countIndex = 0
+    }
+  }
+
+  // linha vertical
+  for (let I = 0; I < nroQuad; I++) {
+    founds = []
+    founded = false
+
+    for (let J = 0; J < nroQuad; J++) {
+      if (!founded) {
+        const value = data[I+(J*nroQuad)]
+        if (founds.find(nro => nro === value)) {
+          founded = true
+        } else {
+          founds.push(value)
+        }
+      }
+    }
+
+    if (!founded) {
+      points += 2
+    }
+  }
+
+  // quadrantes
+  for (let I = 0; I < nroQuad; I++) {
+    const iniQuad = I*nroQuad
+    founds = []
+    founded = false
+
+    for (let J = 0; J < raiz; J++) {
+      for (let K = 0; K < raiz; K++) {
+        const value = data[iniQuad+(J*nroQuad)+K]
+        console.log(value)
+
+        if (!founded) {
+          if (founds.find(nro => nro === value)) {
+            founded = true
+          } else {
+            founds.push(value)
+          }
+        }
+      }
+    }
+
+    if (!founded) {
+      points += 2
+    }
+  }
+  
+
+  console.log(data)
+
+
+  return points
+}
 
 function getBestSolution(population) {
   return population.reduce((best, i) => (!best || i.fit > best.fit) ? i : best, null)
@@ -122,6 +223,9 @@ const sudoku = [
 ]
 
 const sudokuSize = sudoku.length
+const sudokuExp = Math.sqrt(sudokuSize)
+
+console.log(sudokuSize)
 
 function createGenome() {
   return getRandomInt(1,sudokuSize)
@@ -130,7 +234,7 @@ function createGenome() {
 geneticSolution({
   fitFunction,
   createGenome,
-  genomeSize: sudokuSize * 2,
+  genomeSize: sudokuSize * sudokuSize,
   numberPopulation: 50,
   iterations: 200,
   mutationRate: 0.2,
