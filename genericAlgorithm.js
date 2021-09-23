@@ -6,7 +6,6 @@ function getRandomInt(min, max) {
 }
 
 function selection(population) {
-   //return rouletteWheelSelection(population, "prob");
    const selectedIndex = getRandomInt(0, population.length - 1);
    return population[selectedIndex];
 }
@@ -93,10 +92,6 @@ function geneticSolution({
    bar1.start(iterations, 0);
 
    for (let iteration = 0; iteration < iterations; iteration++) {
-      // const sumFit = population.reduce((sum, { fit }) => sum + fit, 0);
-      // const avgFit = sumFit / population.length;
-      // population.forEach((p) => (p.prob = Math.exp(beta * (p.fit / avgFit))));
-
       const newPopulation = [];
       for (
          let children = 0;

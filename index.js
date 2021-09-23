@@ -14,7 +14,7 @@ const config = require("./config.json");
 
 async function generateSudoku() {
    const response = await axios.get(
-      "https://sugoku.herokuapp.com/board?difficulty=random"
+      "https://sugoku.herokuapp.com/board?difficulty=easy"
    );
 
    fs.writeFileSync("board.json", JSON.stringify(response.data.board));
@@ -76,13 +76,11 @@ function createFitFunction(sudoku) {
 
       // coluna - vertical
       for (let i = 0; i < sudokuSize; i++) {
-         const column = data[i];
-
          let columnOK = true;
 
          for (let j = 0; j < sudokuSize; j++) {
             for (let k = 0; k < sudokuSize; k++) {
-               if ((column[j] === column[k]) & (j !== k)) {
+               if (data[j][i] === data[k][i] && j !== k) {
                   columnOK = false;
                   break;
                }
@@ -143,6 +141,20 @@ function countEmptyFields(sudoku) {
    }, 0);
 }
 
+function chunkArray(myArray, chunk_size) {
+   var index = 0;
+   var arrayLength = myArray.length;
+   var tempArray = [];
+
+   for (index = 0; index < arrayLength; index += chunk_size) {
+      myChunk = myArray.slice(index, index + chunk_size);
+      // Do something if you want with the group
+      tempArray.push(myChunk);
+   }
+
+   return tempArray;
+}
+
 function printSudoku(sudoku, original) {
    const table = new Table();
 
@@ -160,20 +172,6 @@ function printSudoku(sudoku, original) {
    );
 
    return table.toString();
-}
-
-function chunkArray(myArray, chunk_size) {
-   var index = 0;
-   var arrayLength = myArray.length;
-   var tempArray = [];
-
-   for (index = 0; index < arrayLength; index += chunk_size) {
-      myChunk = myArray.slice(index, index + chunk_size);
-      // Do something if you want with the group
-      tempArray.push(myChunk);
-   }
-
-   return tempArray;
 }
 
 function reduceArray(array, newSize) {
@@ -210,6 +208,11 @@ function printResults(sudoku, bestSolutions, bestSolution, fitFunction) {
    data.push([
       colors.inverse(`Best Solution - Fit: ${fit}`) +
          "\n" +
+         "Solution: \n" +
+         chunkArray(bestSolution.data, 12)
+            .map((i) => i.join(","))
+            .join("\n") +
+         "\n" +
          sudokuPrinted +
          "\n" +
          `Expected FIT: ${sudokuSize * 4}`,
@@ -218,8 +221,8 @@ function printResults(sudoku, bestSolutions, bestSolution, fitFunction) {
    console.log(data.toString());
 }
 
-async function runGeneticAlgorithm() {
-   const sudoku = JSON.parse(fs.readFileSync("board.json"));
+async function runGeneticAlgorithm(file) {
+   const sudoku = JSON.parse(fs.readFileSync(file));
    const sudokuSize = sudoku.length;
 
    const emptyFieldsCount = countEmptyFields(sudoku);
@@ -248,6 +251,8 @@ async function run() {
    const shouldPrint = process.argv.find((arg) => arg === "--print");
    const shouldGenerate = process.argv.find((arg) => arg === "--generate");
    const shouldRun = process.argv.find((arg) => arg === "--run");
+   const boardArg = process.argv.find((arg) => arg.startsWith("--board="));
+   const boardFile = boardArg ? boardArg.substring(8) : null;
 
    if (shouldGenerate) {
       const sudoku = await generateSudoku();
@@ -257,12 +262,12 @@ async function run() {
       }
    }
    if (shouldPrint) {
-      const sudoku = JSON.parse(fs.readFileSync("board.json"));
+      const sudoku = JSON.parse(fs.readFileSync(boardFile || "board.json"));
       const sudokuPrinted = printSudoku(sudoku);
       console.log(sudokuPrinted);
    }
    if (shouldRun) {
-      await runGeneticAlgorithm();
+      await runGeneticAlgorithm(boardFile || "board.json");
    }
 }
 
