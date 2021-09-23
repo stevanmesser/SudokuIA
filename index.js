@@ -1,7 +1,12 @@
 const asciichart = require("asciichart");
+const colors = require("colors/safe");
 const axios = require("axios");
 const { geneticSolution, getRandomInt } = require("./genericAlgorithm");
 const Table = require("cli-table");
+const process = require("process");
+const fs = require("fs");
+
+const config = require("./config.json");
 
 // --------------
 
@@ -11,6 +16,9 @@ async function generateSudoku() {
    const response = await axios.get(
       "https://sugoku.herokuapp.com/board?difficulty=random"
    );
+
+   fs.writeFileSync("board.json", JSON.stringify(response.data.board));
+
    return response.data.board;
 }
 
@@ -117,7 +125,7 @@ function createFitFunction(sudoku) {
             }
 
             if (!hasDuplicated) {
-               points = points + 2.5;
+               points = points + 2;
             }
          }
       }
@@ -135,21 +143,23 @@ function countEmptyFields(sudoku) {
    }, 0);
 }
 
-function printSudoku(sudoku) {
-   return sudoku.reduce((sum, line) => {
-      return (
-         sum +
-         line.reduce((sumLine, column) => (!column ? sumLine + 1 : sumLine), 0)
-      );
-   }, 0);
-}
-
-function printSudoku(sudoku) {
+function printSudoku(sudoku, original) {
    const table = new Table();
 
-   table.push(...sudoku);
+   table.push(
+      ...sudoku.map((line, lineIndex) =>
+         line.map((item, columnIndex) => {
+            if (original) {
+               return item === original[lineIndex][columnIndex]
+                  ? colors.gray(item)
+                  : item;
+            }
+            return item === 0 ? " " : item;
+         })
+      )
+   );
 
-   console.log(table.toString());
+   return table.toString();
 }
 
 function chunkArray(myArray, chunk_size) {
@@ -185,11 +195,34 @@ function reduceArray(array, newSize) {
    return returnArray;
 }
 
-async function process() {
-   const sudoku = await generateSudoku();
+function printResults(sudoku, bestSolutions, bestSolution, fitFunction) {
+   const sudokuSize = sudoku.length;
+
+   const bestFits = bestSolutions.map((best) => best.fit);
+
+   const sudokuPrinted = printSudoku(
+      fillSudoku(sudoku, bestSolution.data),
+      sudoku
+   );
+   const fit = fitFunction(bestSolution.data, false);
+
+   const data = new Table();
+   data.push([
+      colors.inverse(`Best Solution - Fit: ${fit}`) +
+         "\n" +
+         sudokuPrinted +
+         "\n" +
+         `Expected FIT: ${sudokuSize * 4}`,
+      asciichart.plot(reduceArray(bestFits, 150), { height: 20 }),
+   ]);
+   console.log(data.toString());
+}
+
+async function runGeneticAlgorithm() {
+   const sudoku = JSON.parse(fs.readFileSync("board.json"));
+   const sudokuSize = sudoku.length;
 
    const emptyFieldsCount = countEmptyFields(sudoku);
-   const sudokuSize = sudoku.length;
    const fitFunction = createFitFunction(sudoku);
 
    function createGenome() {
@@ -205,22 +238,32 @@ async function process() {
       fitFunction: createFitFunction(sudoku),
       createGenome,
       genomeSize: emptyFieldsCount,
-      numberPopulation: 5000,
-      iterations: 50000,
-      mutationRate: 0.2,
-      sigma: 0.1,
-      beta: 1,
+      ...config,
    });
 
-   printSudoku(fillSudoku(sudoku, bestSolution.data));
-   const fit = fitFunction(bestSolution.data, true);
-   console.log(fit);
-
-   const bestFits = bestSolutions.map((best) => best.fit);
-   const chunks = chunkArray(bestFits, 100);
-   console.log(
-      asciichart.plot(reduceArray(bestFits, 200), { height: 20 }) + "\n"
-   );
+   printResults(sudoku, bestSolutions, bestSolution, fitFunction);
 }
 
-process();
+async function run() {
+   const shouldPrint = process.argv.find((arg) => arg === "--print");
+   const shouldGenerate = process.argv.find((arg) => arg === "--generate");
+   const shouldRun = process.argv.find((arg) => arg === "--run");
+
+   if (shouldGenerate) {
+      const sudoku = await generateSudoku();
+      if (!shouldRun) {
+         const sudokuPrinted = printSudoku(sudoku);
+         console.log(sudokuPrinted);
+      }
+   }
+   if (shouldPrint) {
+      const sudoku = JSON.parse(fs.readFileSync("board.json"));
+      const sudokuPrinted = printSudoku(sudoku);
+      console.log(sudokuPrinted);
+   }
+   if (shouldRun) {
+      await runGeneticAlgorithm();
+   }
+}
+
+run();

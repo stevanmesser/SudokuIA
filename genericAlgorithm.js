@@ -1,35 +1,38 @@
+const cliProgress = require("cli-progress");
+const rouletteWheelSelection = require("roulette-wheel-selection");
+
 function getRandomInt(min, max) {
    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function rouleteWhellSelection(population) {
+function selection(population) {
+   //return rouletteWheelSelection(population, "prob");
    const selectedIndex = getRandomInt(0, population.length - 1);
    return population[selectedIndex];
 }
 
 function crossover(i1, i2) {
-   const selectedIndex = getRandomInt(0, i1.data.length - 2);
-   const c1 = {
-      data: [
-         ...i1.data.filter((_, index) => index <= selectedIndex),
-         ...i2.data.filter((_, index) => index > selectedIndex),
-      ],
-   };
-   const c2 = {
-      data: [
-         ...i2.data.filter((_, index) => index <= selectedIndex),
-         ...i1.data.filter((_, index) => index > selectedIndex),
-      ],
-   };
+   const c1 = { data: [] };
+   const c2 = { data: [] };
+
+   i1.data.forEach((_, index) => {
+      if (Math.random() >= 0.5) {
+         c1.data.push(i1.data[index]);
+         c2.data.push(i2.data[index]);
+      } else {
+         c1.data.push(i2.data[index]);
+         c2.data.push(i1.data[index]);
+      }
+   });
 
    return { c1, c2 };
 }
 
-function mutate(i, createGenome, mutationRate, sigma) {
-   const selectedIndex = getRandomInt(0, i.data.length - 1);
+function mutate(i, createGenome, mutationRate) {
+   const mutationFlag = i.data.map(() => Math.random() <= mutationRate);
    return {
       data: i.data.map((d, index) =>
-         index === selectedIndex ? createGenome() : d
+         mutationFlag[index] ? createGenome() : d
       ),
    };
 }
@@ -54,14 +57,15 @@ function compare(a, b) {
 function geneticSolution({
    createGenome,
    genomeSize,
-   numberPopulation,
+   initialPopulation,
+   maxPopulation,
+   numberChildrens,
    fitFunction,
    iterations,
    mutationRate,
-   sigma,
    beta,
 }) {
-   let population = Array(numberPopulation)
+   let population = Array(initialPopulation)
       .fill(null)
       .map(() => {
          const data = Array(genomeSize)
@@ -75,22 +79,37 @@ function geneticSolution({
 
    const bestSolutions = Array(iterations).fill(null);
 
+   const bar1 = new cliProgress.SingleBar(
+      {
+         format:
+            "Genetic Algorithm Progress | {bar} " +
+            "| {percentage}% | {value}/{total} Iterations | ETA: {eta}s | Fit: {fit}",
+         barCompleteChar: "\u2588",
+         barIncompleteChar: "\u2591",
+         hideCursor: true,
+      }
+      // cliProgress.Presets.shades_classic
+   );
+   bar1.start(iterations, 0);
+
    for (let iteration = 0; iteration < iterations; iteration++) {
-      // const sumFit = population.reduce((sum, { fit }) => sum + fit, 0)
-      // const avgFit = sumFit / population.length
-      // population.forEach(i => {
-      //   i.prob = Math.exp(beta * (i.fit / avgFit))
-      // })
+      // const sumFit = population.reduce((sum, { fit }) => sum + fit, 0);
+      // const avgFit = sumFit / population.length;
+      // population.forEach((p) => (p.prob = Math.exp(beta * (p.fit / avgFit))));
 
       const newPopulation = [];
-      for (let children = 0; children < 10; children++) {
-         const i1 = rouleteWhellSelection(population);
-         const i2 = rouleteWhellSelection(population);
+      for (
+         let children = 0;
+         children < Math.round(numberChildrens / 2);
+         children++
+      ) {
+         const i1 = selection(population);
+         const i2 = selection(population);
 
          let { c1, c2 } = crossover(i1, i2);
 
-         c1 = mutate(c1, createGenome, mutationRate, sigma);
-         c2 = mutate(c2, createGenome, mutationRate, sigma);
+         c1 = mutate(c1, createGenome, mutationRate);
+         c2 = mutate(c2, createGenome, mutationRate);
 
          c1.fit = fitFunction(c1.data);
 
@@ -112,9 +131,10 @@ function geneticSolution({
       }
 
       population.push(...newPopulation);
-      population = population.sort(compare).slice(0, numberPopulation);
+      population = population.sort(compare).slice(0, maxPopulation);
+      bar1.update(iteration + 1, { fit: getBestSolution(population).fit });
    }
-
+   bar1.stop();
    return { bestSolutions, bestSolution: getBestSolution(population) };
 }
 
