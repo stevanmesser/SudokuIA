@@ -1,5 +1,5 @@
 const cliProgress = require("cli-progress");
-const rouletteWheelSelection = require("roulette-wheel-selection");
+//const rouletteWheelSelection = require("roulette-wheel-selection");
 
 function getRandomInt(min, max) {
    return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -11,18 +11,31 @@ function selection(population) {
 }
 
 function crossover(i1, i2) {
-   const c1 = { data: [] };
-   const c2 = { data: [] };
+   // const c1 = { data: [] };
+   // const c2 = { data: [] };
 
-   i1.data.forEach((_, index) => {
-      if (Math.random() >= 0.5) {
-         c1.data.push(i1.data[index]);
-         c2.data.push(i2.data[index]);
-      } else {
-         c1.data.push(i2.data[index]);
-         c2.data.push(i1.data[index]);
-      }
-   });
+   // i1.data.forEach((_, index) => {
+   //    if (Math.random() >= 0.5) {
+   //       c1.data.push(i1.data[index]);
+   //       c2.data.push(i2.data[index]);
+   //    } else {
+   //       c1.data.push(i2.data[index]);
+   //       c2.data.push(i1.data[index]);
+   //    }
+   // });
+   const selectedIndex = getRandomInt(0, i1.data.length - 2);
+   const c1 = {
+      data: [
+         ...i1.data.filter((_, index) => index <= selectedIndex),
+         ...i2.data.filter((_, index) => index > selectedIndex),
+      ],
+   };
+   const c2 = {
+      data: [
+         ...i2.data.filter((_, index) => index <= selectedIndex),
+         ...i1.data.filter((_, index) => index > selectedIndex),
+      ],
+   };
 
    return { c1, c2 };
 }
@@ -78,17 +91,14 @@ function geneticSolution({
 
    const bestSolutions = Array(iterations).fill(null);
 
-   const bar1 = new cliProgress.SingleBar(
-      {
-         format:
-            "Genetic Algorithm Progress | {bar} " +
-            "| {percentage}% | {value}/{total} Iterations | ETA: {eta}s | Fit: {fit}",
-         barCompleteChar: "\u2588",
-         barIncompleteChar: "\u2591",
-         hideCursor: true,
-      }
-      // cliProgress.Presets.shades_classic
-   );
+   const bar1 = new cliProgress.SingleBar({
+      format:
+         "Genetic Algorithm Progress | {bar} " +
+         "| {percentage}% | {value}/{total} Iterations | ETA: {eta}s | Fit: {fit}",
+      barCompleteChar: "\u2588",
+      barIncompleteChar: "\u2591",
+      hideCursor: true,
+   });
    bar1.start(iterations, 0);
 
    for (let iteration = 0; iteration < iterations; iteration++) {

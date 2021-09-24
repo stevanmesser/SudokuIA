@@ -3,6 +3,5 @@
       "maxPopulation": 1000,
       "iterations": 10000,
       "numberChildrens": 1000,
-      "mutationRate": 0.1,
-      "beta": 1
+      "mutationRate": 0.1
 }
